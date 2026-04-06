@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FCA Worker Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Poppins', sans-serif; background: #F7F9FB; display: flex; align-items: center; justify-content: center; }
+
+  .card {
+    background: #fff;
+    border: 1px solid rgba(43,42,41,0.10);
+    border-radius: 12px;
+    padding: 40px 44px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .logo { margin-bottom: 28px; }
+  .logo-circle {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #00346B; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .logo-circle svg { width: 24px; height: 24px; }
+  .card-title { font-size: 20px; font-weight: 600; color: #2B2A29; margin-bottom: 4px; }
+  .card-sub { font-size: 13px; color: #727271; }
+
+  .input-wrap { position: relative; margin: 24px 0 8px; }
+  .float-label { position: absolute; top: -8px; left: 12px; font-size: 10px; color: #727271; background: #fff; padding: 0 4px; font-weight: 500; }
+  .text-input {
+    width: 100%; border: 1px solid rgba(43,42,41,0.20); border-radius: 8px;
+    padding: 13px 14px; font-size: 14px; color: #2B2A29;
+    font-family: 'Poppins', sans-serif; background: rgba(228,231,233,0.25);
+    outline: none; letter-spacing: 0.2em; transition: border-color 0.15s;
+  }
+  .text-input:focus { border-color: #00346B; background: #fff; }
+
+  .error { font-size: 11px; color: #DF252A; min-height: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 5px; }
+  .error svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+  .btn {
+    width: 100%; font-size: 13px; font-weight: 500; color: #fff;
+    background: #00346B; border: none; border-radius: 100px;
+    padding: 11px; cursor: pointer; font-family: 'Poppins', sans-serif;
+    transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:hover:not(:disabled) { background: #00294F; }
+  .btn:disabled { background: rgba(43,42,41,0.15); cursor: not-allowed; }
+  .btn svg { width: 13px; height: 13px; }
+
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-circle">
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.5"/>
+        <path d="M12 7v5l3 3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-title">Worker Onboarding</div>
+    <div class="card-sub">Enter the passcode provided by your employer to continue.</div>
+  </div>
+
+  <div class="input-wrap">
+    <div class="float-label">Passcode</div>
+    <input class="text-input" id="codeInput" type="password" placeholder="••••••" oninput="onInput()" onkeydown="onKey(event)" autocomplete="off"/>
+  </div>
+
+  <div class="error" id="errorMsg"></div>
+
+  <button class="btn" id="submitBtn" onclick="submit()" disabled>
+    <span id="btnLabel">Continue</span>
+    <svg id="btnArrow" viewBox="0 0 13 13" fill="none"><path d="M2.5 6.5h8M7.5 3.5l3 3-3 3" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<script>
+  function onInput() {
+    const val = document.getElementById('codeInput').value;
+    document.getElementById('submitBtn').disabled = val.length === 0;
+    document.getElementById('errorMsg').innerHTML = '';
+  }
+
+  function onKey(e) {
+    if (e.key === 'Enter') submit();
+  }
+
+  async function submit() {
+    const btn = document.getElementById('submitBtn');
+    const label = document.getElementById('btnLabel');
+    const arrow = document.getElementById('btnArrow');
+    const passcode = document.getElementById('codeInput').value;
+
+    btn.disabled = true;
+    label.textContent = 'Checking…';
+    arrow.style.display = 'none';
+    btn.insertAdjacentHTML('beforeend', '<div class="spinner" id="spin"></div>');
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode })
+      });
+
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        showError('Incorrect passcode. Please try again.');
+      }
+    } catch {
+      showError('Something went wrong. Please try again.');
+    } finally {
+      btn.disabled = false;
+      label.textContent = 'Continue';
+      arrow.style.display = '';
+      document.getElementById('spin')?.remove();
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('errorMsg').innerHTML = `
+      <svg viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#DF252A" stroke-width="1.2"/><path d="M6 3.5v3M6 8.5v.2" stroke="#DF252A" stroke-width="1.2" stroke-linecap="round"/></svg>
+      ${msg}`;
+    document.getElementById('codeInput').value = '';
+    document.getElementById('submitBtn').disabled = true;
+  }
+</script>
+</body>
+</html>
